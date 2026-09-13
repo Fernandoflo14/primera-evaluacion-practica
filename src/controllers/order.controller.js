@@ -2,6 +2,7 @@ const orderService = require('../services/order.service');
 const orderValidationService = require(
   '../services/order-validation.service'
 );
+
 async function getOrderById(req, res) {
   try {
     const { id } = req.params;
@@ -34,50 +35,58 @@ async function getOrderById(req, res) {
     });
   }
 }
-async function validateOrder(req, res) {
+
+async function createOrder(req, res) {
+  const errors = orderValidationService.validateOrderBody(req.body);
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Datos de la orden inválidos',
+      errors,
+    });
+  }
+
   try {
-    const errors = orderValidationService.validateOrderBody(req.body);
+    const orderData = {
+      customer_id: req.body.customer_id.trim(),
+      employee_id: Number(req.body.employee_id),
+      order_date: req.body.order_date,
+      required_date: req.body.required_date || null,
+      products: req.body.products.map((item) => ({
+        product_id: Number(item.product_id),
+        quantity: Number(item.quantity),
+        discount:
+          item.discount === undefined
+            ? 0
+            : Number(item.discount),
+      })),
+    };
 
-    if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Datos de la orden inválidos',
-        errors,
-      });
-    }
+    const orderId = await orderService.createOrder(orderData);
 
-    const {
-      customer_id,
-      employee_id,
-      products,
-    } = req.body;
+    const createdOrder =
+      await orderService.getOrderById(orderId);
 
-    const validation =
-      await orderValidationService.validateOrderReferences(
-        customer_id.trim(),
-        Number(employee_id),
-        products
-      );
-
-    if (!validation.valid) {
-      return res.status(validation.status).json({
-        success: false,
-        message: validation.message,
-      });
-    }
-
-    return res.status(200).json({
+    return res.status(201).json({
       success: true,
-      message: 'La orden es válida y puede ser registrada',
+      message: 'Orden creada correctamente',
+      data: createdOrder,
     });
   } catch (error) {
-    return res.status(500).json({
+    const statusCode = error.statusCode || 500;
+
+    return res.status(statusCode).json({
       success: false,
-      message: 'Error al validar la orden',
+      message:
+        statusCode === 500
+          ? 'Error al crear la orden'
+          : error.message,
     });
   }
 }
+
 module.exports = {
   getOrderById,
-  validateOrder,
+  createOrder,
 };

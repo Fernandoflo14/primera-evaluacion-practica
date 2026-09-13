@@ -1,5 +1,11 @@
 const pool = require('../config/database');
 
+function createServiceError(message, statusCode) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
 async function getOrderById(orderId) {
   const orderQuery = `
     SELECT
@@ -64,6 +70,189 @@ async function getOrderById(orderId) {
   };
 }
 
+async function createOrder(orderData) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const customerResult = await client.query(
+      `
+        SELECT customer_id
+        FROM customers
+        WHERE customer_id = $1
+      `,
+      [orderData.customer_id]
+    );
+
+    if (customerResult.rows.length === 0) {
+      throw createServiceError('Cliente no encontrado', 404);
+    }
+
+    const employeeResult = await client.query(
+      `
+        SELECT employee_id
+        FROM employees
+        WHERE employee_id = $1
+      `,
+      [orderData.employee_id]
+    );
+
+    if (employeeResult.rows.length === 0) {
+      throw createServiceError('Empleado no encontrado', 404);
+    }
+
+    const productIds = orderData.products.map(
+      (item) => item.product_id
+    );
+
+    const productsResult = await client.query(
+      `
+        SELECT
+          product_id,
+          product_name,
+          unit_price,
+          units_in_stock,
+          discontinued
+        FROM products
+        WHERE product_id = ANY($1::smallint[])
+        ORDER BY product_id
+        FOR UPDATE
+      `,
+      [productIds]
+    );
+
+    if (productsResult.rows.length !== productIds.length) {
+      const foundIds = productsResult.rows.map(
+        (product) => Number(product.product_id)
+      );
+
+      const missingIds = productIds.filter(
+        (id) => !foundIds.includes(id)
+      );
+
+      throw createServiceError(
+        `Producto(s) no encontrado(s): ${missingIds.join(', ')}`,
+        404
+      );
+    }
+
+    const productMap = new Map(
+      productsResult.rows.map((product) => [
+        Number(product.product_id),
+        product,
+      ])
+    );
+
+    for (const item of orderData.products) {
+      const product = productMap.get(item.product_id);
+
+      if (Number(product.discontinued) !== 0) {
+        throw createServiceError(
+          `El producto ${product.product_id} está descontinuado`,
+          400
+        );
+      }
+
+      if (Number(product.units_in_stock) < item.quantity) {
+        throw createServiceError(
+          `Stock insuficiente para el producto ${product.product_id}`,
+          400
+        );
+      }
+    }
+
+    // order_id no tiene SERIAL ni IDENTITY en esta base.
+    // Bloqueamos escrituras concurrentes mientras calculamos el siguiente ID.
+    await client.query(
+      'LOCK TABLE orders IN SHARE ROW EXCLUSIVE MODE'
+    );
+
+    const nextIdResult = await client.query(`
+      SELECT COALESCE(MAX(order_id), 0)::integer + 1 AS next_order_id
+      FROM orders
+    `);
+
+    const orderId = Number(
+      nextIdResult.rows[0].next_order_id
+    );
+
+    if (orderId > 32767) {
+      throw createServiceError(
+        'No es posible generar un nuevo order_id',
+        500
+      );
+    }
+
+    await client.query(
+      `
+        INSERT INTO orders (
+          order_id,
+          customer_id,
+          employee_id,
+          order_date,
+          required_date
+        )
+        VALUES ($1, $2, $3, $4, $5)
+      `,
+      [
+        orderId,
+        orderData.customer_id,
+        orderData.employee_id,
+        orderData.order_date,
+        orderData.required_date,
+      ]
+    );
+
+    for (const item of orderData.products) {
+      const product = productMap.get(item.product_id);
+
+      await client.query(
+        `
+          INSERT INTO order_details (
+            order_id,
+            product_id,
+            unit_price,
+            quantity,
+            discount
+          )
+          VALUES ($1, $2, $3, $4, $5)
+        `,
+        [
+          orderId,
+          item.product_id,
+          product.unit_price,
+          item.quantity,
+          item.discount,
+        ]
+      );
+
+      await client.query(
+        `
+          UPDATE products
+          SET units_in_stock =
+            units_in_stock - $1::smallint
+          WHERE product_id = $2
+        `,
+        [
+          item.quantity,
+          item.product_id,
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    return orderId;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   getOrderById,
+  createOrder,
 };

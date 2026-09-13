@@ -1,11 +1,32 @@
-const pool = require('../config/database');
+function isValidDate(value) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return false;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
 
 function validateOrderBody(body) {
   const errors = [];
 
   if (!body || typeof body !== 'object') {
-    errors.push('El cuerpo de la solicitud es obligatorio');
-    return errors;
+    return ['El cuerpo de la solicitud es obligatorio'];
   }
 
   if (
@@ -22,148 +43,70 @@ function validateOrderBody(body) {
     errors.push('employee_id debe ser un número válido');
   }
 
-  if (!body.order_date) {
-    errors.push('order_date es obligatorio');
+  if (!isValidDate(body.order_date)) {
+    errors.push('order_date debe tener formato YYYY-MM-DD y ser una fecha válida');
+  }
+
+  if (
+    body.required_date !== undefined &&
+    body.required_date !== null &&
+    !isValidDate(body.required_date)
+  ) {
+    errors.push('required_date debe tener formato YYYY-MM-DD');
   }
 
   if (!Array.isArray(body.products) || body.products.length === 0) {
     errors.push('La orden debe contener al menos un producto');
-  } else {
-    body.products.forEach((item, index) => {
-      if (
-        !Number.isInteger(Number(item.product_id)) ||
-        Number(item.product_id) <= 0
-      ) {
-        errors.push(
-          `products[${index}].product_id debe ser válido`
-        );
-      }
+    return errors;
+  }
 
-      if (
-        !Number.isInteger(Number(item.quantity)) ||
-        Number(item.quantity) <= 0
-      ) {
-        errors.push(
-          `products[${index}].quantity debe ser mayor a cero`
-        );
-      }
+  const validProductIds = [];
 
-      if (
-        item.discount !== undefined &&
-        (
-          Number.isNaN(Number(item.discount)) ||
-          Number(item.discount) < 0 ||
-          Number(item.discount) > 1
-        )
-      ) {
-        errors.push(
-          `products[${index}].discount debe estar entre 0 y 1`
-        );
-      }
-    });
+  body.products.forEach((item, index) => {
+    const productId = Number(item.product_id);
+    const quantity = Number(item.quantity);
+
+    if (
+      !Number.isInteger(productId) ||
+      productId <= 0 ||
+      productId > 32767
+    ) {
+      errors.push(`products[${index}].product_id debe ser válido`);
+    } else {
+      validProductIds.push(productId);
+    }
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0 ||
+      quantity > 32767
+    ) {
+      errors.push(
+        `products[${index}].quantity debe ser mayor a cero`
+      );
+    }
+
+    if (
+      item.discount !== undefined &&
+      (
+        Number.isNaN(Number(item.discount)) ||
+        Number(item.discount) < 0 ||
+        Number(item.discount) > 1
+      )
+    ) {
+      errors.push(
+        `products[${index}].discount debe estar entre 0 y 1`
+      );
+    }
+  });
+
+  if (new Set(validProductIds).size !== validProductIds.length) {
+    errors.push('No se permiten productos duplicados en la orden');
   }
 
   return errors;
 }
 
-async function validateOrderReferences(customerId, employeeId, products) {
-  const customerResult = await pool.query(
-    `
-      SELECT customer_id
-      FROM customers
-      WHERE customer_id = $1
-    `,
-    [customerId]
-  );
-
-  if (customerResult.rows.length === 0) {
-    return {
-      valid: false,
-      status: 404,
-      message: 'Cliente no encontrado',
-    };
-  }
-
-  const employeeResult = await pool.query(
-    `
-      SELECT employee_id
-      FROM employees
-      WHERE employee_id = $1
-    `,
-    [employeeId]
-  );
-
-  if (employeeResult.rows.length === 0) {
-    return {
-      valid: false,
-      status: 404,
-      message: 'Empleado no encontrado',
-    };
-  }
-
-  const productIds = [...new Set(
-    products.map((item) => Number(item.product_id))
-  )];
-
-  const productsResult = await pool.query(
-    `
-      SELECT
-        product_id,
-        product_name,
-        unit_price,
-        units_in_stock,
-        discontinued
-      FROM products
-      WHERE product_id = ANY($1::smallint[])
-    `,
-    [productIds]
-  );
-
-  if (productsResult.rows.length !== productIds.length) {
-    const foundIds = productsResult.rows.map(
-      (product) => Number(product.product_id)
-    );
-
-    const missingIds = productIds.filter(
-      (id) => !foundIds.includes(id)
-    );
-
-    return {
-      valid: false,
-      status: 404,
-      message: `Producto(s) no encontrado(s): ${missingIds.join(', ')}`,
-    };
-  }
-
-  for (const item of products) {
-    const product = productsResult.rows.find(
-      (row) => Number(row.product_id) === Number(item.product_id)
-    );
-
-    if (Number(product.discontinued) !== 0) {
-      return {
-        valid: false,
-        status: 400,
-        message: `El producto ${product.product_id} está descontinuado`,
-      };
-    }
-
-    if (Number(product.units_in_stock) < Number(item.quantity)) {
-      return {
-        valid: false,
-        status: 400,
-        message: `Stock insuficiente para el producto ${product.product_id}`,
-      };
-    }
-  }
-
-  return {
-    valid: true,
-    products: productsResult.rows,
-  };
-}
-
 module.exports = {
   validateOrderBody,
-  validateOrderReferences,
 };
