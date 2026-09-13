@@ -7,14 +7,21 @@ async function getOrderById(req, res) {
   try {
     const { id } = req.params;
 
-    if (!/^\d+$/.test(id) || Number(id) <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'El ID de la orden debe ser un número válido',
-      });
-    }
+   const orderId = Number(id);
 
-    const order = await orderService.getOrderById(Number(id));
+if (
+  !/^\d+$/.test(id) ||
+  !Number.isInteger(orderId) ||
+  orderId <= 0 ||
+  orderId > 32767
+) {
+  return res.status(400).json({
+    success: false,
+    message: 'El ID de la orden debe ser un número válido',
+  });
+}
+
+    const order = await orderService.getOrderById(orderId);
 
     if (!order) {
       return res.status(404).json({
@@ -28,15 +35,12 @@ async function getOrderById(req, res) {
       message: 'Orden obtenida correctamente',
       data: order,
     });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Error al obtener la orden',
-    });
+    } catch (error) {
+    next(error);
   }
 }
 
-async function createOrder(req, res) {
+async function createOrder(req, res, next) {
   const errors = orderValidationService.validateOrderBody(req.body);
 
   if (errors.length > 0) {
@@ -73,16 +77,8 @@ async function createOrder(req, res) {
       message: 'Orden creada correctamente',
       data: createdOrder,
     });
-  } catch (error) {
-    const statusCode = error.statusCode || 500;
-
-    return res.status(statusCode).json({
-      success: false,
-      message:
-        statusCode === 500
-          ? 'Error al crear la orden'
-          : error.message,
-    });
+    } catch (error) {
+    next(error);
   }
 }
 

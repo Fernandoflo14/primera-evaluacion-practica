@@ -1,6 +1,6 @@
 const customerService = require('../services/customer.service');
 
-async function getCustomers(req, res) {
+async function getCustomers(req, res, next) {
   try {
     const { search } = req.query;
 
@@ -13,10 +13,7 @@ async function getCustomers(req, res) {
       data: customers,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Error al obtener los clientes',
-    });
+    next(error);
   }
 }
 

@@ -8,7 +8,10 @@ const productRoutes = require('./routes/product.routes');
 const orderRoutes = require('./routes/order.routes');
 
 const app = express();
-
+const {
+  notFoundHandler,
+  errorHandler,
+} = require('./middlewares/error.middleware');
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
@@ -24,5 +27,8 @@ app.use('/customers', customerRoutes);
 app.use('/employees', employeeRoutes);
 app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;

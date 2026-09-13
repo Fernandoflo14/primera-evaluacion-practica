@@ -1,6 +1,6 @@
 const productService = require('../services/product.service');
 
-async function getProducts(req, res) {
+async function getProducts(req, res, next){
   try {
     const { search, available } = req.query;
 
@@ -16,11 +16,8 @@ async function getProducts(req, res) {
       data: products,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Error al obtener los productos',
-    });
-  }
+  next(error);
+}
 }
 
 module.exports = {

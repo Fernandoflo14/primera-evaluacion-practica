@@ -1,6 +1,6 @@
 const employeeService = require('../services/employee.service');
 
-async function getEmployees(req, res) {
+async function getEmployees(req, res, next){
   try {
     const { search } = req.query;
 
@@ -12,11 +12,8 @@ async function getEmployees(req, res) {
       count: employees.length,
       data: employees,
     });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Error al obtener los empleados',
-    });
+    } catch (error) {
+    next(error);
   }
 }
 
