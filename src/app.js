@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const customerRoutes = require('./routes/customer.routes');
 const employeeRoutes = require('./routes/employee.routes');
 const productRoutes = require('./routes/product.routes');
+const orderRoutes = require('./routes/order.routes');
 
 const app = express();
 
@@ -22,5 +23,6 @@ app.get('/', (req, res) => {
 app.use('/customers', customerRoutes);
 app.use('/employees', employeeRoutes);
 app.use('/products', productRoutes);
+app.use('/orders', orderRoutes);
 
 module.exports = app;
