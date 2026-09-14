@@ -1,88 +1,292 @@
-# Examen Práctico: API REST con Express para Generar Órdenes usando Northwind en PostgreSQL
+# API REST Northwind - Generación de Órdenes
 
-## 1. Introducción y Contexto de la Evaluación
+API REST desarrollada con Express.js y PostgreSQL para consultar datos de Northwind y generar órdenes de venta de manera validada y transaccional.
 
-En este examen práctico, el estudiante deberá construir una API REST funcional utilizando Express.js y PostgreSQL sobre la base de datos Northwind. La evaluación se centrará exclusivamente en la generación de órdenes de venta, utilizando las entidades relacionadas con clientes, empleados, productos, inventario y detalle de órdenes.
+## Tecnologías
 
-**Enunciado Formal del Examen:** "Desarrollo de una API REST con Express.js para generar órdenes de venta usando Northwind en PostgreSQL".
+- Node.js
+- Express.js
+- PostgreSQL
+- pg
+- dotenv
+- cors
+- helmet
+- nodemon
+- REST Client
 
-**Fechas Límite de Entrega Obligatorias:** Sábado 12 de Septiembre de 2026.
+## Requisitos
 
-## 2. Fundamentos de API REST y Comunicación HTTP
+- Node.js
+- npm
+- PostgreSQL
+- Base de datos Northwind restaurada
 
-La adherencia estricta a los estándares definidos en el **RFC 7231** no es opcional; es el fundamento de una API profesional. El protocolo HTTP opera bajo una naturaleza *stateless* (sin estado) y *connectionless* (sin conexión), lo que obliga a diseñar servicios donde cada solicitud contenga toda la información necesaria para ser procesada. Ignorar estas características resulta en sistemas frágiles y difícilmente escalables.
+## Instalación
 
-### Semántica de Verbos HTTP para la Generación de Órdenes
+Clonar el repositorio:
 
-La API debe exponer únicamente los endpoints necesarios para generar órdenes usando Northwind. Como mínimo, deberá permitir consultar clientes, productos disponibles y datos necesarios para construir una orden, además de crear una orden con sus respectivos detalles. El endpoint principal deberá ser `POST /orders`, encargado de registrar la cabecera de la orden y sus líneas de detalle en las tablas correspondientes. Se evaluará que `GET` y `POST` respeten la semántica REST, retornando códigos de estado apropiados y respuestas JSON consistentes.
+```bash
+git clone https://github.com/FernandoFlo14/primera-evaluacion-practica.git
+```
 
-### Intercambio de Datos: JSON vs XML
+Entrar al proyecto:
 
-Se exige el uso de **JSON (application/json)** para el intercambio de datos. Todas las respuestas deben mantener una estructura uniforme, incluir mensajes claros y evitar exponer información sensible de la base de datos o del servidor.
+```bash
+cd primera-evaluacion-practica
+```
 
-## 3. Fase A: Preparación de Northwind en PostgreSQL
+Instalar dependencias:
 
-El estudiante deberá trabajar sobre una instalación funcional de la base de datos Northwind en PostgreSQL. El foco estará en utilizar las tablas dependientes necesarias para generar órdenes, principalmente `customers`, `employees`, `products`, `orders` y `order_details`. No se requiere administrar todo el modelo Northwind.
+```bash
+npm install
+```
 
-**Requisitos de Base de Datos:**
+## Configuración
 
-- **Instalación:** Importar correctamente el esquema y datos de Northwind en PostgreSQL.
-- **Conexión:** Configurar variables de entorno para host, puerto, usuario, contraseña y nombre de base de datos.
-- **Consulta de datos base:** Permitir la consulta de clientes y productos necesarios para armar una orden.
-- **Registro transaccional:** Insertar la orden y sus detalles de forma consistente, evitando órdenes incompletas si ocurre un error.
-- **Consultas SQL:** Implementar consultas parametrizadas para evitar inyección SQL.
+Crear un archivo `.env` basado en `.env.example`.
 
-## 4. Fase B: Implementación de la API REST con Express.js
+```env
+PORT=3000
 
-La API debe organizarse de forma modular, separando rutas, controladores, servicios o repositorios de acceso a datos según corresponda. Se valorará que el código sea claro, ejecutable y orientado al caso de uso principal: generar órdenes de venta en Northwind.
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=NorthWind
+```
 
-**Requisitos de Implementación:**
+El archivo `.env` contiene credenciales locales y no debe subirse a GitHub.
 
-- **Endpoints mínimos:** Definir rutas como `GET /customers`, `GET /products`, `GET /orders/:id` y `POST /orders`.
-- **Generación de órdenes:** Implementar la creación de una orden con cabecera y detalle, recibiendo cliente, empleado, fecha y lista de productos con cantidades.
-- **Validación de productos:** Verificar que los productos enviados existan y que las cantidades sean válidas antes de registrar la orden.
-- **Códigos HTTP:** Utilizar respuestas como 200, 201, 400, 404 y 500 de forma coherente.
-- **Pruebas:** Presentar evidencia de pruebas de creación y consulta de órdenes con Postman, Thunder Client, REST Client o herramienta equivalente.
+## Ejecución
 
-## 5. Fase C: Validación, Seguridad y Manejo de Errores
+Modo desarrollo:
 
-El examen práctico deberá demostrar que la API genera órdenes de forma controlada, valida los datos recibidos y evita inconsistencias durante el registro de la cabecera y los detalles de la orden.
+```bash
+npm run dev
+```
 
-**Requisitos mínimos:**
+Modo normal:
 
-- Validar que el cliente y el empleado existan antes de crear la orden.
-- Validar que cada producto exista y que la cantidad sea mayor a cero.
-- Usar transacciones para evitar que se registre una cabecera sin sus detalles o detalles sin cabecera.
-- Controlar errores de base de datos sin exponer detalles internos al cliente.
-- Retornar mensajes JSON claros para solicitudes inválidas o recursos inexistentes.
+```bash
+npm start
+```
 
-## 6. Fase D: Prácticas de Ingeniería y Documentación
+Servidor:
 
-La entrega debe permitir ejecutar, revisar y probar específicamente el flujo de generación de órdenes. Se evaluará la claridad del repositorio, la documentación del endpoint principal y la evidencia de funcionamiento.
+```text
+http://localhost:3000
+```
 
-**Requisitos de entrega:**
+## Estructura
 
-- **Repositorio:** Código fuente organizado y con historial de commits suficiente.
-- **README.md:** Instrucciones para instalar dependencias, configurar variables de entorno, iniciar el servidor y probar la generación de órdenes.
-- **Archivo `.env.example`:** Plantilla de configuración sin credenciales reales.
-- **Colección de pruebas:** Postman, Thunder Client o archivo equivalente con solicitudes para consultar clientes, consultar productos, crear una orden y consultar una orden creada.
-- **Evidencia:** Capturas o documentación breve que muestre una orden creada exitosamente y casos de error controlados.
+```text
+src/
+├── config/
+│   └── database.js
+├── controllers/
+│   ├── customer.controller.js
+│   ├── employee.controller.js
+│   ├── order.controller.js
+│   └── product.controller.js
+├── middlewares/
+│   └── error.middleware.js
+├── routes/
+│   ├── customer.routes.js
+│   ├── employee.routes.js
+│   ├── order.routes.js
+│   └── product.routes.js
+├── services/
+│   ├── customer.service.js
+│   ├── employee.service.js
+│   ├── order-validation.service.js
+│   ├── order.service.js
+│   └── product.service.js
+├── app.js
+└── server.js
+```
 
-## 7. Rúbrica Detallada de Evaluación
+## Endpoints
 
-La evaluación se centrará exclusivamente en la construcción de una API REST con Express.js conectada a Northwind en PostgreSQL para generar órdenes de venta.
+### Clientes
 
-**Puntaje total:** 100 puntos. Para aprobar, el estudiante debe demostrar que la API genera órdenes reales en Northwind de forma funcional, validada y consistente.
+```http
+GET /customers
+```
 
-| Criterio de evaluación | Puntaje | Descripción de la rúbrica |
-|---|---|---|
-| Configuración del proyecto y conexión a PostgreSQL/Northwind | 10 puntos | Estructura inicial del proyecto Express, instalación de dependencias, uso correcto de variables de entorno, conexión funcional a PostgreSQL y carga correcta de la base de datos Northwind. |
-| Diseño REST orientado a generación de órdenes | 15 puntos | Definición clara de endpoints mínimos, uso adecuado de GET y POST, rutas coherentes como `/customers`, `/products`, `/orders` y `/orders/:id`, respuestas JSON uniformes y códigos HTTP correctos. |
-| Consulta de datos base para construir órdenes | 10 puntos | Consulta correcta de clientes, empleados y productos disponibles, uso de filtros cuando corresponda y entrega de información suficiente para armar una orden válida. |
-| Generación funcional de órdenes | 25 puntos | Implementación completa de `POST /orders`, registro correcto de la cabecera en `orders`, registro de múltiples productos en `order_details`, cálculo o uso correcto de precios, cantidades y descuentos según el modelo Northwind. |
-| Validaciones de negocio | 10 puntos | Verificación de existencia de cliente, empleado y productos, validación de cantidades mayores a cero, estructura correcta del cuerpo de la solicitud y rechazo de órdenes incompletas o inconsistentes. |
-| Transacciones y consistencia de datos | 10 puntos | Uso de transacciones para asegurar que la cabecera y los detalles de la orden se creen juntos, aplicación de rollback ante errores y prevención de registros parciales. |
-| Manejo de errores y seguridad básica | 8 puntos | Middleware centralizado de errores, mensajes JSON claros, protección de información sensible, uso de consultas parametrizadas, configuración de CORS y helmet. |
-| Pruebas y evidencia de funcionamiento | 7 puntos | Colección de pruebas en Postman, Thunder Client o equivalente, evidencia de creación exitosa de una orden, consulta de orden creada y casos de error controlados. |
-| Documentación y presentación final | 5 puntos | README claro, instrucciones de instalación y ejecución, archivo `.env.example`, explicación breve del flujo de generación de órdenes y presentación ordenada del repositorio. |
-| **Total** | **100 puntos** | Evaluación completa de la API REST para generación de órdenes con Express, PostgreSQL y Northwind. |
+Filtro opcional:
+
+```http
+GET /customers?search=alfred
+```
+
+### Empleados
+
+```http
+GET /employees
+```
+
+### Productos
+
+```http
+GET /products
+```
+
+Solo productos con stock:
+
+```http
+GET /products?available=true
+```
+
+### Consultar una orden
+
+```http
+GET /orders/:id
+```
+
+Ejemplo:
+
+```http
+GET /orders/11078
+```
+
+### Crear una orden
+
+```http
+POST /orders
+Content-Type: application/json
+```
+
+Ejemplo:
+
+```json
+{
+  "customer_id": "ALFKI",
+  "employee_id": 1,
+  "order_date": "2026-09-13",
+  "required_date": "2026-09-20",
+  "products": [
+    {
+      "product_id": 3,
+      "quantity": 1,
+      "discount": 0
+    },
+    {
+      "product_id": 40,
+      "quantity": 1,
+      "discount": 0.1
+    }
+  ]
+}
+```
+
+Una creación correcta responde:
+
+```text
+201 Created
+```
+
+## Validaciones
+
+La API valida:
+
+- existencia del cliente;
+- existencia del empleado;
+- existencia de los productos;
+- cantidades mayores a cero;
+- productos no descontinuados;
+- inventario suficiente;
+- descuentos entre 0 y 1;
+- fechas válidas;
+- lista de productos no vacía;
+- productos no duplicados.
+
+## Transacciones
+
+La creación de órdenes se realiza dentro de una transacción PostgreSQL:
+
+```text
+BEGIN
+  ├── Validar cliente
+  ├── Validar empleado
+  ├── Bloquear y validar productos
+  ├── Generar order_id
+  ├── INSERT orders
+  ├── INSERT order_details
+  ├── Actualizar inventario
+COMMIT
+```
+
+Ante cualquier error:
+
+```text
+ROLLBACK
+```
+
+Esto impide que exista una cabecera sin detalles o una orden parcialmente registrada.
+
+## Seguridad y manejo de errores
+
+El proyecto utiliza:
+
+- consultas SQL parametrizadas;
+- Helmet;
+- CORS;
+- variables de entorno;
+- middleware centralizado de errores;
+- respuestas JSON uniformes;
+- protección de detalles internos de PostgreSQL.
+
+Códigos HTTP principales:
+
+| Código | Uso                        |
+| ------ | -------------------------- |
+| 200    | Consulta exitosa           |
+| 201    | Orden creada correctamente |
+| 400    | Solicitud inválida         |
+| 404    | Recurso no encontrado      |
+| 500    | Error interno              |
+
+## Pruebas
+
+Las solicitudes se encuentran en:
+
+```text
+tests/northwind-api.http
+```
+
+Se pueden ejecutar desde VS Code utilizando la extensión **REST Client**.
+
+El archivo incluye pruebas para:
+
+- consultar clientes;
+- consultar empleados;
+- consultar productos disponibles;
+- consultar una orden creada;
+- crear una orden;
+- cliente inexistente;
+- cantidad inválida;
+- orden inexistente;
+- ID inválido;
+- ruta inexistente.
+
+## Evidencia
+
+Las evidencias de funcionamiento se encuentran en:
+
+```text
+docs/evidence/
+```
+
+La orden principal creada durante las pruebas es:
+
+```text
+order_id: 11078
+customer_id: ALFKI
+employee_id: 1
+```
+
+La orden fue registrada en `orders` junto con múltiples registros en `order_details`.
+
+## Autor
+
+Fernando SC
